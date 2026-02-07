@@ -1,0 +1,33 @@
+name: Docker Promote Tag to Latest
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_tag:
+        description: "Existing image tag to promote (e.g. 2026-02-07-18-42-11)"
+        required: true
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set image name
+        run: |
+          echo "IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/data-analysis-stack" >> $GITHUB_ENV
+          echo "SOURCE_TAG=${{ github.event.inputs.source_tag }}" >> $GITHUB_ENV
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Pull existing image
+        run: |
+          docker pull $IMAGE:$SOURCE_TAG
+
+      - name: Promote tag to latest
+        run: |
+          docker tag $IMAGE:$SOURCE_TAG $IMAGE:latest
+          docker push $IMAGE:latest
