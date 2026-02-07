@@ -5,6 +5,7 @@ LABEL org.opencontainers.image.description="Generic data analysis and automation
 LABEL org.opencontainers.image.source="https://github.com/javakishore-veleti/Data-Analysis-Stack"
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV SERVER_MODE=true
 
 # Install base OS tools
 RUN apt-get update && apt-get install -y \
@@ -23,8 +24,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 # Upgrade pip
 RUN pip install --no-cache-dir --upgrade pip
 
-# Create a neutral working directory
+# Working directory
 WORKDIR /workspace
 
-# Keep container alive for interactive / exec use
-CMD ["sleep", "infinity"]
+# Entrypoint
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+ENTRYPOINT ["docker-entrypoint.sh"]
