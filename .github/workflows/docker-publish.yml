@@ -10,11 +10,26 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # REQUIRED for git tagging
 
-      - name: Set build timestamp and image name
+      - name: Capture commit metadata
         run: |
-          echo "TAG=$(date -u +'%Y-%m-%d-%H-%M-%S')" >> $GITHUB_ENV
+          COMMIT_SHA=$(git rev-parse HEAD)
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          TIMESTAMP=$(date -u +'%Y-%m-%d-%H-%M-%S')
+
+          echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
+          echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
+          echo "TAG=$TIMESTAMP" >> $GITHUB_ENV
           echo "IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/data-analysis-stack" >> $GITHUB_ENV
+
+      - name: Create Git tag for this release
+        run: |
+          git tag -a "release-${SHORT_SHA}" \
+            -m "Docker image published from commit ${COMMIT_SHA}"
+
+          git push origin "release-${SHORT_SHA}"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -27,8 +42,13 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t $IMAGE:$TAG .
+          docker build \
+            --label org.opencontainers.image.revision=${COMMIT_SHA} \
+            --label org.opencontainers.image.created=${TAG} \
+            --label org.opencontainers.image.source=https://github.com/${{ github.repository }} \
+            -t $IMAGE:$TAG \
+            .
 
-      - name: Push Docker image (timestamp tag only)
+      - name: Push Docker image
         run: |
           docker push $IMAGE:$TAG
