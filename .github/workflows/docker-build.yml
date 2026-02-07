@@ -1,0 +1,27 @@
+name: Docker Build (Timestamp Tag, No Publish)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set build timestamp
+        id: timestamp
+        run: |
+          echo "TAG=$(date -u +'%Y-%m-%d-%H-%M-%S')" >> $GITHUB_ENV
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image (no push)
+        run: |
+          echo "Building image with tag: $TAG"
+          docker build \
+            -t data-analysis-stack:$TAG \
+            .
