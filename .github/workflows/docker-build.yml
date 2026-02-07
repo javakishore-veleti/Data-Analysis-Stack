@@ -27,5 +27,10 @@ jobs:
             .
       - name: Smoke test
         run: |
-          docker run --rm data-analysis-stack:$TAG python --version
-          docker run --rm data-analysis-stack:$TAG node --version
+          docker run --rm \
+            -e SERVER_MODE=false \
+            data-analysis-stack:$TAG python --version
+
+          docker run --rm \
+            -e SERVER_MODE=false \
+            data-analysis-stack:$TAG node --version
