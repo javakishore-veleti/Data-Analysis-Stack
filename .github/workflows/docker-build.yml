@@ -25,3 +25,7 @@ jobs:
           docker build \
             -t data-analysis-stack:$TAG \
             .
+      - name: Smoke test
+        run: |
+          docker run --rm data-analysis-stack:$TAG python --version
+          docker run --rm data-analysis-stack:$TAG node --version
