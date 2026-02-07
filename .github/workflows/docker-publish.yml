@@ -44,12 +44,12 @@ jobs:
       # -------------------------------------------------
       # Create and push Git tag
       # -------------------------------------------------
-      - name: Create Git release tag
+      - name: Create Git tag matching Docker image tag
         run: |
-          git tag -a "release-${SHORT_SHA}" \
-            -m "Docker image published from commit ${COMMIT_SHA}"
+          git tag -a "${TAG}" \
+            -m "Docker image ${IMAGE}:${TAG} published from commit ${COMMIT_SHA}"
 
-          git push origin "release-${SHORT_SHA}"
+          git push origin "${TAG}"
 
       # -------------------------------------------------
       # Docker Buildx setup
