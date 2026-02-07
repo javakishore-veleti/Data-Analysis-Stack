@@ -1,4 +1,4 @@
-name: Docker Build & Publish
+name: 02 Docker Build & Publish
 
 on:
   workflow_dispatch:

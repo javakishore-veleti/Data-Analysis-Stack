@@ -1,4 +1,4 @@
-name: Docker Promote Tag to Latest
+name: 03 Docker Promote Tag to Latest
 
 on:
   workflow_dispatch:
