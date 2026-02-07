@@ -3,17 +3,26 @@ name: 02 Docker Build & Publish
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write   # 👈 REQUIRED to push Git tags
+
 jobs:
   publish:
     runs-on: ubuntu-latest
 
     steps:
+      # -------------------------------------------------
+      # Checkout full repo history (required for tagging)
+      # -------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # REQUIRED for git tagging
+          fetch-depth: 0
 
-      - name: Capture commit metadata
+      # -------------------------------------------------
+      # Capture commit metadata and build tag
+      # -------------------------------------------------
+      - name: Capture commit and build metadata
         run: |
           COMMIT_SHA=$(git rev-parse HEAD)
           SHORT_SHA=$(git rev-parse --short HEAD)
@@ -24,22 +33,42 @@ jobs:
           echo "TAG=$TIMESTAMP" >> $GITHUB_ENV
           echo "IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/data-analysis-stack" >> $GITHUB_ENV
 
-      - name: Create Git tag for this release
+      # -------------------------------------------------
+      # Configure Git identity for tagging
+      # -------------------------------------------------
+      - name: Configure Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # -------------------------------------------------
+      # Create and push Git tag
+      # -------------------------------------------------
+      - name: Create Git release tag
         run: |
           git tag -a "release-${SHORT_SHA}" \
             -m "Docker image published from commit ${COMMIT_SHA}"
 
           git push origin "release-${SHORT_SHA}"
 
+      # -------------------------------------------------
+      # Docker Buildx setup
+      # -------------------------------------------------
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # -------------------------------------------------
+      # Authenticate to Docker Hub
+      # -------------------------------------------------
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
+      # -------------------------------------------------
+      # Build Docker image with commit metadata
+      # -------------------------------------------------
       - name: Build Docker image
         run: |
           docker build \
@@ -49,6 +78,18 @@ jobs:
             -t $IMAGE:$TAG \
             .
 
+      # -------------------------------------------------
+      # Push Docker image (timestamp tag only)
+      # -------------------------------------------------
       - name: Push Docker image
         run: |
           docker push $IMAGE:$TAG
+
+      # -------------------------------------------------
+      # Optional: Smoke test
+      # -------------------------------------------------
+      - name: Smoke test image
+        run: |
+          docker run --rm $IMAGE:$TAG python --version
+          docker run --rm $IMAGE:$TAG node --version
+          docker run --rm $IMAGE:$TAG aws --version

@@ -1,95 +1,33 @@
-name: 02 Docker Build & Publish
+name: 03 Docker Promote Tag to Latest
 
 on:
   workflow_dispatch:
-
-permissions:
-  contents: write   # 👈 REQUIRED to push Git tags
+    inputs:
+      source_tag:
+        description: "Existing image tag to promote (e.g. 2026-02-07-18-42-11)"
+        required: true
 
 jobs:
-  publish:
+  promote:
     runs-on: ubuntu-latest
 
     steps:
-      # -------------------------------------------------
-      # Checkout full repo history (required for tagging)
-      # -------------------------------------------------
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      # -------------------------------------------------
-      # Capture commit metadata and build tag
-      # -------------------------------------------------
-      - name: Capture commit and build metadata
+      - name: Set image name
         run: |
-          COMMIT_SHA=$(git rev-parse HEAD)
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          TIMESTAMP=$(date -u +'%Y-%m-%d-%H-%M-%S')
-
-          echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
-          echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
-          echo "TAG=$TIMESTAMP" >> $GITHUB_ENV
           echo "IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/data-analysis-stack" >> $GITHUB_ENV
+          echo "SOURCE_TAG=${{ github.event.inputs.source_tag }}" >> $GITHUB_ENV
 
-      # -------------------------------------------------
-      # Configure Git identity for tagging
-      # -------------------------------------------------
-      - name: Configure Git identity
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      # -------------------------------------------------
-      # Create and push Git tag
-      # -------------------------------------------------
-      - name: Create Git release tag
-        run: |
-          git tag -a "release-${SHORT_SHA}" \
-            -m "Docker image published from commit ${COMMIT_SHA}"
-
-          git push origin "release-${SHORT_SHA}"
-
-      # -------------------------------------------------
-      # Docker Buildx setup
-      # -------------------------------------------------
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # -------------------------------------------------
-      # Authenticate to Docker Hub
-      # -------------------------------------------------
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      # -------------------------------------------------
-      # Build Docker image with commit metadata
-      # -------------------------------------------------
-      - name: Build Docker image
+      - name: Pull existing image
         run: |
-          docker build \
-            --label org.opencontainers.image.revision=${COMMIT_SHA} \
-            --label org.opencontainers.image.created=${TAG} \
-            --label org.opencontainers.image.source=https://github.com/${{ github.repository }} \
-            -t $IMAGE:$TAG \
-            .
+          docker pull $IMAGE:$SOURCE_TAG
 
-      # -------------------------------------------------
-      # Push Docker image (timestamp tag only)
-      # -------------------------------------------------
-      - name: Push Docker image
+      - name: Promote tag to latest
         run: |
-          docker push $IMAGE:$TAG
-
-      # -------------------------------------------------
-      # Optional: Smoke test
-      # -------------------------------------------------
-      - name: Smoke test image
-        run: |
-          docker run --rm $IMAGE:$TAG python --version
-          docker run --rm $IMAGE:$TAG node --version
-          docker run --rm $IMAGE:$TAG aws --version
+          docker tag $IMAGE:$SOURCE_TAG $IMAGE:latest
+          docker push $IMAGE:latest
