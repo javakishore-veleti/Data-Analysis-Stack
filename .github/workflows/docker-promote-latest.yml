@@ -3,6 +3,9 @@ name: 02 Docker Build & Publish
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write   # 👈 REQUIRED to push Git tags
+
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -31,7 +34,7 @@ jobs:
           echo "IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/data-analysis-stack" >> $GITHUB_ENV
 
       # -------------------------------------------------
-      # Configure Git identity for creating annotated tags
+      # Configure Git identity for tagging
       # -------------------------------------------------
       - name: Configure Git identity
         run: |
@@ -39,7 +42,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       # -------------------------------------------------
-      # Create and push Git tag tied to this Docker build
+      # Create and push Git tag
       # -------------------------------------------------
       - name: Create Git release tag
         run: |
@@ -83,7 +86,7 @@ jobs:
           docker push $IMAGE:$TAG
 
       # -------------------------------------------------
-      # Optional: Smoke test (recommended)
+      # Optional: Smoke test
       # -------------------------------------------------
       - name: Smoke test image
         run: |
